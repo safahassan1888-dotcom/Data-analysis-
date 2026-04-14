@@ -82,7 +82,7 @@ SELECT
 FROM olist_orders_dataset
 WHERE order_status = 'delivered'
   AND order_delivered_customer_date IS NOT NULL
-  AND order_estimated_delivery_date IS NOT NULL;
+  AND order_estimated_delivery_date IS NOT NULL
  
   2: Top States/Cities by Orders
 
@@ -94,7 +94,7 @@ FROM olist_orders_dataset o
 JOIN olist_customers_dataset c ON o.customer_id = c.customer_id
 WHERE o.order_status = 'delivered'
 GROUP BY c.customer_state, c.customer_city
-ORDER BY total_orders DESC;
+ORDER BY total_orders DESC
 
 3: Late vs On-Time Orders
 SELECT 
@@ -111,7 +111,7 @@ GROUP BY
     CASE 
         WHEN o.order_delivered_customer_date <= o.order_estimated_delivery_date THEN 'On Time'
         ELSE 'Late'
-        END;
+        END
        
   4: Shipping Lead Time
 
@@ -121,3 +121,40 @@ FROM olist_orders_dataset
 WHERE order_status = 'delivered'
   AND order_delivered_carrier_date IS NOT NULL
   AND order_approved_at IS NOT NULL;
+ 
+ 
+
+  -- Forecast monthly sales trend using historical delivered orders
+SELECT 
+    DATEPART(YEAR, order_delivered_customer_date) AS Year,
+    DATEPART(MONTH, order_delivered_customer_date) AS Month,
+    COUNT(order_id) AS Total_Orders
+FROM olist_orders_dataset
+WHERE order_status = 'delivered'
+GROUP BY DATEPART(YEAR, order_delivered_customer_date), DATEPART(MONTH, order_delivered_customer_date)
+ORDER BY Year, Month;
+
+
+
+-- Forecast demand by customer state
+SELECT 
+    c.customer_state,
+    DATEPART(YEAR, o.order_delivered_customer_date) AS Year,
+    DATEPART(MONTH, o.order_delivered_customer_date) AS Month,
+    COUNT(o.order_id) AS Orders_Per_State
+FROM olist_orders_dataset o
+JOIN olist_customers_dataset c ON o.customer_id = c.customer_id
+WHERE o.order_status = 'delivered'
+GROUP BY c.customer_state, DATEPART(YEAR, o.order_delivered_customer_date), DATEPART(MONTH, o.order_delivered_customer_date)
+ORDER BY c.customer_state, Year, Month;
+
+-- Forecast average shipping lead time over months
+SELECT 
+    DATEPART(YEAR, order_delivered_carrier_date) AS Year,
+    DATEPART(MONTH, order_delivered_carrier_date) AS Month,
+    AVG(DATEDIFF(DAY, order_approved_at, order_delivered_carrier_date)) AS Avg_Shipping_Lead_Time
+FROM olist_orders_dataset
+WHERE order_status = 'delivered'
+GROUP BY DATEPART(YEAR, order_delivered_carrier_date), DATEPART(MONTH, order_delivered_carrier_date)
+ORDER BY Year, Month;
+
